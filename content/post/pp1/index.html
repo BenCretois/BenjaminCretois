@@ -1,0 +1,209 @@
+---
+title: Point process model - Part 1
+author: Benjamin Cretois
+date: '2020-09-09'
+slug: point-process-model-part-1
+categories: []
+tags:
+  - Statistics
+  - Spatial analysis
+  - Point processes
+subtitle: ''
+summary: ''
+authors: []
+lastmod: '2020-09-09T14:55:42+02:00'
+featured: no
+image:
+  caption: ''
+  focal_point: ''
+  preview_only: no
+projects: []
+---
+
+
+
+<p>I have recently been playing with spatial data as a learning exercise and I have been particularly interested in point pattern analysis. While some packages already have canned function for this (see the excellent <code>inlabru</code> or the very well known <code>spatstat</code>), I prefer not to rely on them. As I wanted to improve my understanding of point pattern models and decided to use <code>rstan</code> where I need to code my model from scratch.</p>
+<div id="point-pattern-and-point-process" class="section level2">
+<h2>Point pattern and point process</h2>
+<p>There is many resources introducing to the notions of point patterns and point processes but I will quickly explain these two notions here.</p>
+<div id="point-pattern" class="section level3">
+<h3>Point pattern</h3>
+<p>A <strong>point pattern</strong> represents the distribution of a set of points in time, space or higher dimensions. For instance, the location of trees in a forest can be thought as a point pattern. The location of crimes is another example of point pattern.
+There are three general patterns:</p>
+<ul>
+<li><strong>Random</strong> : any point is equally likely to occur at any location and the position of a point is not affected by the position of other points. For example, if I throw a bag of marble on the floor it is likely that the pattern will be random.</li>
+<li><strong>Uniform</strong> : every point is as far from its neighbors as possible. For example, we can think of a human-made forests where trees are regularly placed.</li>
+<li><strong>Clustered</strong> : many points are concentrated close together, possibly due to a covariate. We can take the example of bees locations in a field, locations will likely cluster around flowers. The point pattern that we simulate in this post represent a clustered point pattern.</li>
+</ul>
+</div>
+<div id="point-process" class="section level3">
+<h3>Point process</h3>
+<p><strong>A Spatial point processes</strong> is a description of the point pattern. We can think of it as the model which generated the point pattern. The points arise from a random process, described by the local intensity <span class="math inline">\(\lambda(s)\)</span>, which measures the expected density of points at a given location, s, in space. If points arise independantly and at random, the local intensity can be described by a homogenous Poisson distribution and is refered to as a <em>Poisson point process</em>. If event locations are independant but the intensity varies spatially, the distribution arises from an <em>inhomogenous point process</em> (i.e. <span class="math inline">\(\lambda(s)\)</span> varies). The latter is also called <em>inhomogenous Poisson process</em>.</p>
+<p>We can model the intensity of the inhomogenous point process as a function of covariates. We describe this type of model as follow:</p>
+<p><span class="math inline">\(\lambda(s) = exp(\alpha + \beta * X(u))\)</span></p>
+<p>Where X(u) is a spatial covariate and <span class="math inline">\(\alpha\)</span> and <span class="math inline">\(\beta\)</span> are parameters to be estimated. Z(u) can represent the pH of a soil for instance or temperature in the air.</p>
+</div>
+</div>
+<div id="r-libraries" class="section level2">
+<h2>R libraries</h2>
+<p>To replicate this tutorial you will need to load the following libraries:</p>
+<pre class="r"><code>library(spatstat)
+library(sf)
+library(sp)
+library(maptools)
+library(raster)
+library(rstan)
+library(tidyverse)
+library(cowplot)</code></pre>
+</div>
+<div id="simulating-a-point-pattern" class="section level2">
+<h2>Simulating a point pattern</h2>
+<p>First, I need to simulate a point pattern. In my opinion there is countless benefit to simulating data and it especially help to understand how they are generated. From a pragmatic perspective, when generating data we have total control over the parameters and it is very easy to see if we made a mistake when fitting a model.</p>
+<p>Here is a function which internally generate a point pattern based on our values of <span class="math inline">\(\alpha\)</span>, <span class="math inline">\(\beta\)</span> and the dimensions of our study area. Note that the <code>dim[1]</code> and <code>dim[2]</code> have to be equal.</p>
+<p>The function returns a list of 3 objects:</p>
+<ul>
+<li>The number of points in each grid cell. This will be useful when fitting the model in stan.</li>
+<li>A <strong>ppp</strong> object which is a spatstat object. This will be helpful when fitting the model with spatstat</li>
+<li>The covariate, which is a grid of values</li>
+</ul>
+<pre class="r"><code>genDat_pp &lt;- function(b1, b2, dim, plotdat = TRUE){
+  
+  # Define the window of interest
+  win &lt;- owin(c(0,dim[1]), c(0,dim[2]))
+  
+  # set number of pixels to simulate an environmental covariate
+  spatstat.options(npixel=c(dim[1],dim[2]))
+  
+  y0 &lt;- seq(win$yrange[1], win$yrange[2],
+            length=spatstat.options()$npixel[2])
+  x0 &lt;- seq(win$xrange[1], win$xrange[2],
+            length=spatstat.options()$npixel[1])
+  multiplier &lt;- 1/dim[2]
+  
+  # Make the environmental covariate
+  gridcov &lt;- outer(x0,y0, function (x,y) multiplier*y + 0*x)
+
+  # Set the coefficients
+  beta0 &lt;- b1
+  beta1 &lt;- b2
+  
+  # Simulate the point pattern
+  pp &lt;- rpoispp(im(exp(beta0 + beta1*gridcov), xcol=x0, yrow=y0))
+  
+  # We count the number of points in each grid cell, plot it and make a vector out of it
+  qcounts &lt;- quadratcount(pp, ny=dim[1], nx=dim[2])
+  dens &lt;- density(pp)
+  Lambda &lt;- as.vector(t(qcounts)) # We have to use t() as we need to construct the vector with the column first
+  
+  if(plotdat == TRUE){
+    par(mfrow=c(1,2), mar=c(2,2,1,1), mgp=c(1,0.5,0))
+    plot(im(gridcov), main = &#39;Covariate&#39;)
+    plot(dens, main = &#39;Intensity&#39;)
+  }
+  # Return a list with which I can play with
+  return(list(Lambda = Lambda, pp = pp, gridcov = gridcov))
+}</code></pre>
+<p>I set a seed for the results to be replicated and choose the parameters for the simulation:</p>
+<pre class="r"><code>set.seed(123)
+b1 &lt;- 2
+b2 &lt;- 3
+dim &lt;- c(20,20)</code></pre>
+<p>And finally generate my point pattern. The function generated 2 plots, the first one is the simulated covariate and the second one is the simulated intensity of the point pattern.</p>
+<pre class="r"><code>pp &lt;- genDat_pp(b1, b2, dim)</code></pre>
+<p><img src="/post/pp1/index_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<p>Et voila! We now have data we can play with!</p>
+</div>
+<div id="fitting-point-process-model-with-spatstat" class="section level2">
+<h2>Fitting point process model with spatstat</h2>
+<p>As a basic check I fit the model with the function <code>ppm()</code> from the package <code>spatstat</code> to be sure I am able to recover the parameters I have previously specified.</p>
+<pre class="r"><code>cov &lt;- im(pp$gridcov)
+fit &lt;- ppm(pp$pp ~ 1 + cov)
+fit$coef</code></pre>
+<pre><code>## (Intercept)         cov 
+##    2.187846    2.788411</code></pre>
+<p>The coefficients of the model are coherent with the coefficients I specified.</p>
+</div>
+<div id="fitting-the-point-process-model-in-stan" class="section level2">
+<h2>Fitting the point process model in stan</h2>
+<p>My code for the point process model in stan is as follow:</p>
+<pre class="r"><code>ppm_stan &lt;- &#39;
+data{
+  int&lt;lower = 1&gt; n;
+  vector[n] x;
+  int&lt;lower = 0&gt; y[n];
+}
+parameters{
+  real beta0;
+  real beta1;
+}
+transformed parameters{
+}
+model{
+  //priors
+  target += normal_lpdf(beta0 | 0,5);
+  target += normal_lpdf(beta1 | 0,10);
+
+  // likelihood
+  target += poisson_log_lpmf(y | beta0 + beta1 * x);
+}
+generated quantities{
+  vector[n] lambda_rep;
+  lambda_rep = exp(beta0 + beta1 * x);
+}&#39;</code></pre>
+<p>We next fit this model:</p>
+<pre class="r"><code>stan_data = list(n = length(pp$Lambda), x = as.vector(t(pp$gridcov)), y = pp$Lambda)
+fit_stan &lt;- stan(model_code = ppm_stan, data = stan_data, 
+                 warmup = 500, iter = 2000, chains = 3)</code></pre>
+<p>And check if the coefficients are coherent with the ones I specified:</p>
+<pre class="r"><code>print(fit_stan, pars = c(&#39;beta0&#39;, &#39;beta1&#39;))</code></pre>
+<pre><code>## Inference for Stan model: 200e1419a3bfac13c3097743f3003142.
+## 3 chains, each with iter=2000; warmup=500; thin=1; 
+## post-warmup draws per chain=1500, total post-warmup draws=4500.
+## 
+##       mean se_mean   sd 2.5%  25%  50%  75% 97.5% n_eff Rhat
+## beta0 2.12       0 0.02 2.08 2.11 2.12 2.14  2.17  1003    1
+## beta1 2.97       0 0.03 2.91 2.95 2.97 2.99  3.02  1029    1
+## 
+## Samples were drawn using NUTS(diag_e) at Thu Sep 10 11:14:23 2020.
+## For each parameter, n_eff is a crude measure of effective sample size,
+## and Rhat is the potential scale reduction factor on split chains (at 
+## convergence, Rhat=1).</code></pre>
+<p>This is also coherent. We notice that the coefficients stan return are a bit higher than what <code>ppm()</code> gave us.</p>
+</div>
+<div id="comparing-spatstat-and-rstan-output" class="section level2">
+<h2>Comparing spatstat and rstan output</h2>
+<p>A first thing we can do is to check if the predictions seem correct. This can help us develop our intuition about which software performs better and help us double check if the model fit correctly.</p>
+<p>Making the prediction for the <code>ppm()</code> object is simpler than with the stan object, but it is still relatively straightforward:</p>
+<pre class="r"><code># spatstat predictions
+pred &lt;- predict(fit)
+
+# Stan predictions
+lambda_rep &lt;- as.data.frame(rstan::extract(fit_stan)[&#39;lambda_rep&#39;])
+mean_lambda_rep &lt;- apply(lambda_rep, 2, &#39;mean&#39;)</code></pre>
+<p>We then create a grid in which we will gather all the predictions</p>
+<pre class="r"><code>pointp &lt;- pp$pp
+pp_sp &lt;- as.SpatialPoints.ppp(pointp)
+pp_sf &lt;- st_as_sf(pp_sp)
+
+grid &lt;- st_make_grid(pp_sf, n = dim, what = &#39;polygons&#39;) %&gt;% st_as_sf()
+grid$pred_stan &lt;- mean_lambda_rep
+grid$pred_spatstat &lt;- as.vector(t(pred$v))
+grid$intensity &lt;- pp$Lambda</code></pre>
+<p>Plot the predictions</p>
+<pre class="r"><code>plot(grid)</code></pre>
+<p><img src="/post/pp1/index_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
+<p>Somehow, spatstat do not predict in some cells.</p>
+<p>We can also plot the coefficients, this will help us vizualise the error associated to the parameter values.</p>
+<p><img src="/post/pp1/index_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<p>Graphically we can see that stan performs better than the <code>ppm()</code> function. We can formalize this intuition by computing the sum of the <strong>Root Mean squared error</strong>.</p>
+<p>We define our helper function <code>rmse</code>:</p>
+<pre class="r"><code>rmse &lt;- function(true, observed){sqrt((true - observed)^2)}</code></pre>
+<p>And we calculate. First note that we get rid of the NAs values as spatstat did not predict in certain grid cells.</p>
+<pre class="r"><code>grid_no_na &lt;- grid %&gt;% filter(!is.na(pred_spatstat))
+sum(rmse(grid_no_na$intensity, grid_no_na$pred_stan))</code></pre>
+<pre><code>## [1] 1993.056</code></pre>
+<pre class="r"><code>sum(rmse(grid_no_na$intensity, grid_no_na$pred_spatstat))</code></pre>
+<pre><code>## [1] 2551.068</code></pre>
+<p>The sum RMSE for the point process model fitted in stan is inferior to the sum rmse fitted with spatstat which make us conclude that in this case stan performed better.</p>
+<p>In Part 2 we will take the point processes further and we will see how to simulate and fit a <em>Cox process</em> - which is an <em>inhomogenous Poisson process</em> with a random intensity function. We will also take the case of the <em>Log gaussian Cox process</em> in which the log-intensity of the Cox process is a Gaussian process!</p>
+</div>
