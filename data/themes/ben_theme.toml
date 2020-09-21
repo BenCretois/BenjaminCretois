@@ -1,16 +1,16 @@
   # Theme metadata
-name = "julia"
+name = "Ben"
 
 # Is theme light or dark?
 light = true
 
 # Primary
-primary = "#cf9fa9"
+primary = "#9B870C"
 
 # Menu
 menu_primary = "#ffffff"
 menu_text = "#333"
-menu_text_active = "#cf9fa9"
+menu_text_active = "#9B870C"
 menu_title = "#333"
 
 # Backgrounds
