@@ -1,0 +1,27 @@
+---
+title: Biases in Citizen Science data
+categories: []
+tags:
+  - Citizen Science
+  - Point processes
+  - Spatial analysis
+subtitle: ''
+summary: ''
+authors: []
+lastmod: '2020-09-25T11:33:46+02:00'
+featured: no
+image:
+  caption: ''
+  focal_point: ''
+  preview_only: no
+projects: []
+---
+
+
+
+<p><em>Repost from our project’s blog <a href="https://citizenscience.no/accessibility-as-driver/">citizenscience.no</a></em></p>
+<p>Citizen Science databases (e.g. GBIF, iNaturalist) are full of opportunistic observations and offer a massive, cost-efficient alternative to professional surveys. However, if we want to produce reliable inference using it, we need to consider the sampling process behind this data and account for potential biases.</p>
+<p>As an initial attempt to better understand CS data, we’ve modeled it as a point pattern which is potentially degraded by many factors such as differences in sampling effort, detectability or misidentification. We focused on accessibility, using the distance to the nearest road, as a driver for variation in sampling effort. Through a log-linear functional form we modeled the relationship between accessibility and the sampling effort.</p>
+<p>We performed a simulation with multiple scenarios of variation in sampling effort and miss-specification of the functional form associated to it. The results show less biased estimates of the covariates linked to the ecological process when we account for the sampling process. As applied example, we used accessibility as a proxy for differences in sampling effort for modeling the distribution of moose in Hedmark. Our results show, as expected, improvement in model performance when we accounted for the sampling process in CS data.</p>
+<p>These results are far from reaching the reality of species distributions, but serve as a first step for incorporating different factors that influence the sampling process of CS data as well as incorporating and modeling jointly multiple sources of information such as professional surveys, telemetry data, etc.</p>
+<p>Our paper is available at (<a href="https://www.sciencedirect.com/science/article/pii/S2211675320300403" class="uri">https://www.sciencedirect.com/science/article/pii/S2211675320300403</a>).</p>
