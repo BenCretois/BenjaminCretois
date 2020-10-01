@@ -1,0 +1,37 @@
+---
+title: Citizen Science field trip
+author: Benjamin Cretois
+date: '2020-10-01'
+slug: fieldtrip
+categories: []
+tags:
+  - Citizen Science
+  - Biodiversity
+  - Fun
+subtitle: ''
+summary: ''
+authors: []
+lastmod: '2020-10-01T09:03:23+02:00'
+featured: no
+image:
+  caption: ''
+  focal_point: ''
+  preview_only: no
+projects: []
+---
+*Repost from our projects' website https://citizenscience.no/citizen-science-field-trip/*
+
+Wednesday (September 23rd), the entire group met up at the local hiking area near Byåsen to get some actual real-life citizen science field experience. We held a little bioblitz (i.e. a sort of informal field survey) as the kick off for a PhD course on Citizen Science we are all taking. This was a good occasion to test various reporting mechanisms. We set ourselves a few goals:
+
+* Report observations using both [desktop](https://www.artsobservasjoner.no/) and the [mobile](https://mobil.artsobservasjoner.no/#/) Artsobservasjoner site
+* Report observations using both [iNaturalist](https://www.inaturalist.org/) site and app
+* Test Artsdatabanken’s [Artsorakel](https://orakel.artsdatabanken.no/) as an identification aid
+* Report at least 5 species of insects, 5 plants, 5 birds, and 5 other species, each
+
+```{r, echo = FALSE, fig.align='center', out.width="50%", fig.cap="It was mushroom season!"}
+knitr::include_graphics("fungi.jpg")
+```
+
+The main finding, despite weather conditions typical for September in Trøndelag, was that citizen science is a lot of fun, even for the non-initiated! Our fields of study differ, and for some members of the group this was their first activity as a citizen scientists. We felt that doing this as a group, especially one so diverse, added to the experience. A group will always see more than a single observer will, and it was useful for all of us working with the data that comes from citizen science to see how individual differences, equipment, interests, digital tools, and a range of other factors influence what is discovered and reported and what is not. The endeavor has resulted in a better understanding of the data collection process and its caveats, some concrete recommendations to Artsdatabanken regarding the various tools. And, last but not least, the wish to do this again sometime soon.
+
+Out observations can be found on the [Artsobservasjoner](https://www.artsobservasjoner.no/ViewSighting/ViewSightingAsTable?storedSearchCriterias=3550210) and the [iNaturalist](https://www.inaturalist.org/projects/bobonauts-bioblitz) sites, respectively.
