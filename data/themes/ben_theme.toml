@@ -5,13 +5,13 @@ name = "Ben"
 light = true
 
 # Primary
-primary = "#9B870C"
+primary = "#FFA500"
 
 # Menu
-menu_primary = "#ffffff"
-menu_text = "#333"
-menu_text_active = "#9B870C"
-menu_title = "#333"
+menu_primary = "#101820FF"
+menu_text = "#ffffff"
+menu_text_active = "#FFA500"
+menu_title = "#ffffff"
 
 # Backgrounds
 background = "#ffffff"
