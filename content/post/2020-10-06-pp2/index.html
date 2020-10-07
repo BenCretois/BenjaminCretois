@@ -1,0 +1,430 @@
+---
+title: Fitting point process models in Stan - Part 2
+author: Benjamin Cretois
+date: '2020-10-06'
+slug: fitting-point-process-models-in-stan-part-2
+categories: []
+tags:
+  - Point processes
+  - Spatial analysis
+  - Statistics
+subtitle: ''
+summary: ''
+authors: []
+lastmod: '2020-10-06T09:20:25+02:00'
+featured: no
+image:
+  caption: ''
+  focal_point: ''
+  preview_only: no
+projects: []
+---
+
+
+
+<p>In the <a href="https://benjamincretois.netlify.app/post/point-process-model-part-1/">previous post</a> we learned about the <strong>Poisson point process model</strong> and how to fit it in <code>Stan</code> &amp; <code>spatstat</code>. In the Poisson point process model we assume each points to be independent of each other. Since Nature likes to complicate our lives this assumption is rarely satisfied and we need to account for any dependency between our observations to get our statistical model right.</p>
+<p>Before looking at the <strong>Log Gaussian Cox Process</strong> it will be conceptually insightful to first take a glance at the <strong>Cox process</strong>.</p>
+<div id="load-the-libraries" class="section level1">
+<h1>Load the libraries</h1>
+<pre class="r"><code># Libraries
+library(spatstat)
+library(sf)
+library(sp)
+library(maptools)
+library(raster)
+library(fields)
+library(rstan)
+library(tidyverse)
+library(RandomFields)
+library(bayesplot)</code></pre>
+</div>
+<div id="cox-process" class="section level1">
+<h1>Cox process</h1>
+<p>In the case of the <strong>inhomogeneous Poisson process</strong> (that we described in the first part), the intensity function vary spatially but is given by a deterministic intensity function: <span class="math inline">\(\lambda(s) = exp(\alpha + \beta * X(u))\)</span>. In the case of the <strong>Cox process</strong>, the intensity measure may be a realization of a <strong>non-negative random variable or a random field</strong>: <span class="math inline">\(\Lambda(s) = exp(\alpha + \beta * X(u) + u(s))\)</span>; <span class="math inline">\(u(s)\)</span> being a random function (i.e. some noise). This explains why the <strong>Cox process</strong> is also referred to as a <strong>doubly stochastic Poisson process</strong>.</p>
+<p>To generate a realization of the Cox process, we need to generate a realization of the underlying random function <span class="math inline">\(\Lambda(s)\)</span> which is also called <strong>the driving intensity</strong>.</p>
+<p>The function <code>genDat_cox</code> below will produce a generation of a Cox process. You can compare it to the <code>genDat_ppp</code> from the first part, we basically just add some noise or a <strong>random field</strong>.</p>
+<pre class="r"><code># Simulate realization of a cox process
+genDat_cox &lt;- function(b0, b1, dim, noise_mean = NULL, noise_sd = NULL, plotdat = TRUE){
+  
+  # Define the window of interest
+  win &lt;- owin(c(0,dim[1]), c(0,dim[2]))
+  
+  # set number of pixels to simulate an environmental covariate
+  spatstat.options(npixel=c(dim[1],dim[2]))
+  
+  y0 &lt;- seq(win$yrange[1], win$yrange[2],
+            length=spatstat.options()$npixel[2])
+  x0 &lt;- seq(win$xrange[1], win$xrange[2],
+            length=spatstat.options()$npixel[1])
+  multiplier &lt;- 1/dim[2]
+  
+  # Make the environmental covariate
+  gridcov &lt;- outer(x0,y0, function (x,y) multiplier*y + 0*x)
+  
+  # Set the parameter values
+  beta0 &lt;- b0
+  beta1 &lt;- b1
+  
+  if(!is.null(noise_mean) &amp;&amp; !is.null(noise_sd)){
+    noise_mean &lt;- noise_mean
+    noise_sd &lt;- noise_sd
+  }
+  
+  else{
+    noise_mean = 0
+    noise_sd = 1
+  }
+  
+  # Create &#39;im&#39; objects for simulating the point process
+  # First we create a random field (just noise), then the intensity
+  # field made of our linear predictors and we sum up the two images
+  # to get the intensity of the point process
+  noise &lt;- rnoise(rnorm, mean = noise_mean, sd = noise_sd, w = win) 
+  linear &lt;- im(b0 + b1*gridcov, xrange = c(0,20), yrange = c(0,20))
+  intensity &lt;- noise + linear
+  
+  # Simulate the point pattern
+  pp &lt;- rpoispp(exp(intensity), xcol=x0, yrow=y0)
+  qcounts &lt;- quadratcount(pp, ny=dim[1], nx=dim[2])
+  dens &lt;- density(pp)
+  Lambda &lt;- as.vector(t(qcounts))
+  
+  if(plotdat == TRUE){
+    par(mfrow=c(2,2), mar=c(2,2,1,1), mgp=c(1,0.5,0))
+    plot(noise, main = &#39;White noise&#39;)
+    plot(im(gridcov), main = &#39;Covariate&#39;)
+    plot(intensity, main = &#39;log Intensity&#39;)
+    plot(dens, main = &#39;Intensity of the point pattern&#39;)
+  }
+  # Return a list with which I can play with
+  return(list(Lambda = Lambda, pp = pp, gridcov = gridcov))
+}</code></pre>
+<p>We set a random seed for replicable results and our parameter values. Note that this time we also specify parameters for the noise.</p>
+<pre class="r"><code># Set a seed
+set.seed(123)
+
+# We now have a double stochastic process where the intensity is random
+b0 &lt;- 2
+b1 &lt;- 3
+dim &lt;- c(20,20)
+noise_mean &lt;- 1
+noise_sd &lt;- 0.5
+
+# Generate data
+pp &lt;- genDat_cox(b0, b1, dim, noise_mean, noise_sd)</code></pre>
+<p><img src="/post/2020-10-06-pp2/index_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<p>Now let’s fit the model in Stan to see if we can recover our parameters. The Stan code below is not much more complex than the one to fit the <strong>Inhomogeneous Poisson point process</strong>, we only need to add a parameter <span class="math inline">\(\sigma_n\)</span> to estimate the noise. We assume the noise to be normally distributed with mean 0 and standard deviation of <span class="math inline">\(\sigma_n\)</span>: <span class="math inline">\(noise = N(0, \sigma_n)\)</span></p>
+<blockquote>
+<p>Note that we need to accept that the intercept is b0 + mean_noise with an error of 0. It is not possible to the mean of the random effect. This is called the problem of non-idenifiability (see <a href="https://mc-stan.org/docs/2_18/stan-users-guide/collinearity-section.html">this link</a> for more details).</p>
+</blockquote>
+<pre class="r"><code>cox_stan &lt;- &#39;
+// Fit a Cox process in Stan
+
+data{
+  int&lt;lower = 1&gt; n;
+  vector[n] x;
+  int&lt;lower = 0&gt; y[n];
+}
+parameters{
+  real beta0;
+  real beta1;
+  real&lt;lower = 0, upper = 5&gt; sigma_noise;
+  vector[n] noise;
+}
+transformed parameters{
+}
+model{
+  //priors
+  target += normal_lpdf(beta0 | 0,5);
+  target += normal_lpdf(beta1 | 0,10);
+  target += uniform_lpdf(sigma_noise | 0,1);
+  
+  // Prior for the noise
+  target += normal_lpdf(noise | 0, sigma_noise);
+
+  // likelihood
+  target += poisson_log_lpmf(y | beta0 + beta1 * x + noise);
+}
+generated quantities{
+  vector[n] lambda_rep;
+  lambda_rep = exp(beta0 + beta1 * x + noise);
+}
+&#39;</code></pre>
+<p>We can now fit the model:</p>
+<pre class="r"><code># Prepare the data list for Stan
+stan_data = list(n = length(pp$Lambda), x = as.vector(t(pp$gridcov)), y = pp$Lambda)
+
+# Fit the model
+fit_stan_cox &lt;- stan(model_code = cox_stan, data = stan_data, 
+                 warmup = 500, iter = 2000, chains = 3)</code></pre>
+<pre class="r"><code># Take a look at the model output
+print(fit_stan_cox, pars = c(&#39;beta0&#39;, &#39;beta1&#39;, &#39;sigma_noise&#39;))</code></pre>
+<pre><code>## Inference for Stan model: 0d3a8d9475a2a04a1f24b34e82bbd636.
+## 3 chains, each with iter=2000; warmup=500; thin=1; 
+## post-warmup draws per chain=1500, total post-warmup draws=4500.
+## 
+##             mean se_mean   sd 2.5%  25%  50%  75% 97.5% n_eff Rhat
+## beta0       3.03    0.00 0.05 2.93 2.99 3.03 3.06  3.12   323 1.00
+## beta1       2.98    0.01 0.08 2.81 2.92 2.98 3.04  3.14   154 1.01
+## sigma_noise 0.48    0.00 0.02 0.45 0.47 0.48 0.50  0.52  5281 1.00
+## 
+## Samples were drawn using NUTS(diag_e) at Wed Oct 07 12:42:06 2020.
+## For each parameter, n_eff is a crude measure of effective sample size,
+## and Rhat is the potential scale reduction factor on split chains (at 
+## convergence, Rhat=1).</code></pre>
+<p>From the output we can see that the model managed to recover the parameters we specified previously.</p>
+<pre class="r"><code># Get the posterior distribution of the parameters
+posterior &lt;- as.array(fit_stan_cox)
+
+# Plot!
+mcmc_intervals(posterior,
+           pars = c(&#39;beta0&#39;, &#39;beta1&#39;, &#39;sigma_noise&#39;),
+           prob = 1) </code></pre>
+<pre><code>## Warning: `prob_outer` (0.9) is less than `prob` (1)
+## ... Swapping the values of `prob_outer` and `prob`</code></pre>
+<p><img src="/post/2020-10-06-pp2/index_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<p>Note that as said previously, in the model output <span class="math inline">\(\beta_0 = Intercept + \bar{noise}\)</span> - which is coherent with the parameters values that we specified: <span class="math inline">\(\beta_0 = 2\)</span> and <span class="math inline">\(\bar{noise} = 1\)</span></p>
+<p>As we have written some code to do predictions in the <code>generated quantities</code> bloc we can plot the predicted intensity and compare it to the real intensity of the Cox process.</p>
+<pre class="r"><code># Retrieve the predicted lambdas and calculate their means and standard deviation
+lambda_rep &lt;- as.data.frame(rstan::extract(fit_stan_cox)[&#39;lambda_rep&#39;])
+mean_lambda_rep &lt;- apply(lambda_rep, 2, &#39;mean&#39;)
+sd_lambda_rep &lt;- apply(lambda_rep, 2, &#39;sd&#39;)
+
+# Transform the pp object into an sf object so we can count the number of points in each grid cell
+pointp &lt;- pp$pp
+pp_sp &lt;- as.SpatialPoints.ppp(pointp)
+pp_sf &lt;- st_as_sf(pp_sp)
+
+# Create a grid and place the predictions in it
+grid &lt;- st_make_grid(pp_sf, n = dim, what = &#39;polygons&#39;) %&gt;% 
+  st_as_sf() %&gt;% 
+  mutate(pred = mean_lambda_rep,
+         sd = sd_lambda_rep)
+
+# COunt the number of points in each grid cell
+grid$real &lt;- lengths(st_intersects(grid, pp_sf))
+
+# Plot the grid
+plot(grid[&quot;pred&quot;])</code></pre>
+<p><img src="/post/2020-10-06-pp2/index_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<pre class="r"><code>plot(grid[&quot;sd&quot;])</code></pre>
+<p><img src="/post/2020-10-06-pp2/index_files/figure-html/unnamed-chunk-8-2.png" width="672" /></p>
+<pre class="r"><code>plot(grid[&quot;real&quot;])</code></pre>
+<p><img src="/post/2020-10-06-pp2/index_files/figure-html/unnamed-chunk-8-3.png" width="672" /></p>
+<p>Of course, we do not get the exact same pattern as the real one because of the stochastic nature of the model.</p>
+</div>
+<div id="log-gaussian-cox-process" class="section level1">
+<h1>Log gaussian Cox process</h1>
+<p>Let’s increase the complexity. We define a log Gaussian Cox process (LGCP) is a doubly stochastic construction consisting of a Poisson point process with a random log-intensity given by a <strong>Gaussian random field</strong>. This mean that this time, the <strong>non-negative random variable</strong> from the Cox process described previously is a <strong>Gaussian random field</strong> (or GRF). This sounds more scary that it is in reality.</p>
+<p>When we simulated the cox process we first created some random noise in the study area, this was our <strong>random field</strong>:</p>
+<pre class="r"><code># Simulation of the random field
+noise &lt;- rnoise(rnorm, mean = noise_mean, sd = noise_sd)
+plot(noise)</code></pre>
+<p><img src="/post/2020-10-06-pp2/index_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<p>The noise values were <strong>distributed totally at random</strong>. In a Gaussian Random Field the noise values <strong>are not distributed at random</strong>, they follow a bivariate Gaussian distribution. This means that the observations are correlated to each other. In practice, this means that this <strong>random variable</strong> will make the observations cluster in certain region of space. There will be “hot spots”, where the values of the GRF will be high and will “attract” the observations, and “cold spots”.</p>
+<p>We can create a GRF by <strong>smoothing enough</strong> the noise that I previously defined:</p>
+<pre class="r"><code>noise_smooth &lt;- Smooth(noise, sigma=2, normalise=TRUE, bleed=FALSE)
+plot(noise_smooth)</code></pre>
+<p><img src="/post/2020-10-06-pp2/index_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+<p>We can now clearly visualize “hot spots” and “cold spots”.</p>
+<p>If the GRF is not accounted for we have <strong>spatial correlation</strong> (if you work in 2 dimensions) and the observations are not independent from each other, messing with our statistical model. Usually this result in lower credible / confidence intervals and make us too confident of our results.</p>
+<p>Intuitively, we can think that if observations close to each other are more similar due to the <strong>spatial correlation</strong>, then we need to define a function which makes the <strong>spatial correlation</strong> decrease with the distance. For this we can use functions such as the <strong>Exponential covariance function</strong>, the <strong>Exponential Quadratic covariance function</strong> or the <strong>Matèrn covariance function</strong>. We will see that in more detail in the following section.</p>
+<p>We can simulate the realization of a GRF using the function <code>rLGCP</code> from the <code>spatstat</code> package. We use it in our <code>genDat_lgcp</code> function shown below:</p>
+<pre class="r"><code># Simulate realization of a Log-Gaussian Cox process
+genDat_lgcp &lt;- function(b0, b1, dim, var, scale, plotdat = TRUE){
+  
+  # Define the window of interest
+  win &lt;- owin(c(0,dim[1]), c(0,dim[2]))
+  
+  # set number of pixels to simulate an environmental covariate
+  spatstat.options(npixel=c(dim[1],dim[2]))
+  
+  y0 &lt;- seq(win$yrange[1], win$yrange[2],
+            length=spatstat.options()$npixel[2])
+  x0 &lt;- seq(win$xrange[1], win$xrange[2],
+            length=spatstat.options()$npixel[1])
+  multiplier &lt;- 1/dim[2]
+  
+  # Make the environmental covariate
+  gridcov &lt;- outer(x0,y0, function (x,y) multiplier*y + 0*x)
+  
+  # Set the parameter values
+  beta0 &lt;- b0
+  beta1 &lt;- b1
+  var &lt;- var
+  scale &lt;- scale
+  
+  # Simulate the LGCP, here we define the covariance structure as being exponential
+  GP &lt;- rLGCP(model=&quot;exp&quot;, 
+              mu=im(beta0 + beta1*gridcov, xcol=x0, yrow=y0), 
+              var=var, scale=scale, win = win)
+  
+  # Get the realisation of the LGCP as an sf object - easier to handle
+  g &lt;- as.ppp(GP)
+  GP_sp &lt;- as.SpatialPoints.ppp(g)
+  GP_sf &lt;- st_as_sf(GP_sp)
+  
+  # Get the result in a grid
+  grid &lt;- st_make_grid(GP_sf, n = dim, what = &#39;polygons&#39;) %&gt;% 
+    st_as_sf() %&gt;% 
+    mutate(Lambda = lengths(st_intersects(., GP_sf)),
+           cov = as.vector(t(gridcov)))
+  
+  if(plotdat == TRUE){
+    par(mfrow=c(1,2), mar=c(2,2,1,1), mgp=c(1,0.5,0))
+    plot(grid[&quot;Lambda&quot;], main = &#39;Intensity of the point pattern&#39;)
+  }
+  # Return a list with which I can play with
+  return(grid)
+}</code></pre>
+<p>We define the parameters and simulate the Log-Gaussian Cox process.</p>
+<pre class="r"><code>beta0 &lt;- 2
+beta1 &lt;- 3
+var &lt;- 0.5
+scale &lt;- 0.4
+dim = c(10,10)
+
+data_lgcp &lt;- genDat_lgcp(beta0, beta1, dim, var, scale)</code></pre>
+<p><img src="/post/2020-10-06-pp2/index_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<p>Now it is time to make inference, accounting for the spatial correlation between the points!</p>
+<div id="exponential-covariance-function" class="section level2">
+<h2>Exponential covariance function</h2>
+<p>We first construct the model by assuming that the covariance between two points follow an <strong>Exponential covariance structure</strong>. This means that the correlation between two points decrease exponentially:</p>
+<p><span class="math inline">\(C(x_i, x_j) = \sigma^2exp(\frac{-d}{\rho})^2\)</span></p>
+<ul>
+<li><span class="math inline">\(\sigma^2\)</span> being the variance of the correlation</li>
+<li><span class="math inline">\(-d\)</span> being the distance between two points</li>
+<li><span class="math inline">\(\rho\)</span> being the rate of decline of the correlation. If it is large, it means that the correlation decrease rapidly.</li>
+</ul>
+<p>In Stan, we write the function which will account for the Gaussian Random Field in the <code>function</code> block. Have a look at it, it is very informative.</p>
+<p>Note that you can tweak the correlation function as you wish, thus if you think that assuming that the correlation between two points decrease exponentially is wrong you can just change the formula specified at the 10th line:</p>
+<p><code>K[i, j] = sq_alpha * exp(- x[i,j] / sq_rho );</code></p>
+<p>Here is how the full model look like:</p>
+<pre class="r"><code>fit_lgcp0 &lt;- &#39;
+// Fit an accurate LGCP in Stan with the Exponential covariance structure
+functions{
+  
+    matrix GP(matrix x, real sigma_sq, real scale, real delta) {
+        int N = dims(x)[1];
+        matrix[N, N] K;
+        for (i in 1:(N-1)) {
+          K[i, i] = sigma_sq + delta;
+          for (j in (i + 1):N) {
+            K[i, j] = sigma_sq * exp(- x[i,j] / scale );
+            K[j, i] = K[i, j];
+          }
+        }
+        K[N, N] = sigma_sq + delta;
+        return K;
+    }
+}
+data{
+  int&lt;lower = 1&gt; N;
+  vector[N] x;
+  int&lt;lower = 0&gt; y[N];
+  matrix[N, N] DMat; // Distance matrix
+}
+parameters{
+  real beta0;
+  real beta1;
+  vector[N] k;
+  
+  // GP standard deviation parameters
+  real&lt;lower=0&gt; sigma_sq;
+  // GP length-scale parameters
+  real&lt;lower=0&gt; scale;
+}
+model{
+  matrix[N,N] SIGMA;
+  vector[N] mu;
+
+  SIGMA = GP(DMat, sigma_sq, scale, 0.01);
+  k ~ multi_normal(rep_vector(0,N), SIGMA);
+  
+  //priors for the coefficients
+  target += normal_lpdf(beta0 | 0,5);
+  target += normal_lpdf(beta1 | 0,10);
+  
+  // Prior for the noise
+  target += cauchy_lpdf(sigma_sq | 0, 1);
+  target += inv_gamma_lpdf(scale | 3.884416, 0.77454);
+
+  // likelihood
+    for(i in 1:N){
+    mu[i] = beta0 + beta1 * x[i] + k[i];
+  }
+  
+  target += poisson_log_lpmf(y | mu);
+}
+generated quantities{
+}
+&#39;</code></pre>
+<p>To fit the model in Stan we first need to compute the distance matrix between the points. This will be the <code>matrix x</code> argument from the GP function. Since we have grid cells and not points, we compute the distance of the centroids of the grid cells.</p>
+<pre class="r"><code># Calculate Dmat:
+DMat &lt;- st_distance(st_centroid(data_lgcp), by_element = FALSE)</code></pre>
+<pre><code>## Warning in st_centroid.sf(data_lgcp): st_centroid assumes attributes are
+## constant over geometries of x</code></pre>
+<p>We now have all the elements to fit the model in Stan. Note that I add some arguments to the <code>stan</code> function. I set the <code>adapt_delta</code> at 0.999 and the <code>max_treedepth</code> at 13. While I do not know the exact details of their purpose, they help the model to converge properly.</p>
+<pre class="r"><code># Make stan data
+stan_data &lt;- list(N = nrow(data_lgcp),
+                  x = data_lgcp$cov,
+                  y = data_lgcp$Lambda,
+                  DMat = DMat)
+
+# Compute the distance matrix
+stan_fit0 &lt;- stan(model_code = fit_lgcp0,
+                  data = stan_data,
+                  chains = 1, warmup = 1000, iter = 5000,
+                  control = list(adapt_delta = 0.999, max_treedepth=13))</code></pre>
+<pre class="r"><code>print(stan_fit0, pars = c(&#39;beta0&#39;, &#39;beta1&#39;, &#39;sigma_sq&#39;, &#39;scale&#39;))</code></pre>
+<pre><code>## Inference for Stan model: 0c965274310df644156ac065125292f3.
+## 1 chains, each with iter=5000; warmup=1000; thin=1; 
+## post-warmup draws per chain=4000, total post-warmup draws=4000.
+## 
+##          mean se_mean   sd 2.5%  25%  50%  75% 97.5% n_eff Rhat
+## beta0    2.22    0.01 0.15 1.92 2.12 2.21 2.31  2.50   422    1
+## beta1    2.87    0.01 0.24 2.40 2.71 2.86 3.02  3.37   269    1
+## sigma_sq 0.48    0.00 0.08 0.34 0.42 0.47 0.52  0.66  4964    1
+## scale    0.24    0.00 0.11 0.09 0.16 0.22 0.30  0.51  4334    1
+## 
+## Samples were drawn using NUTS(diag_e) at Wed Oct 07 12:59:40 2020.
+## For each parameter, n_eff is a crude measure of effective sample size,
+## and Rhat is the potential scale reduction factor on split chains (at 
+## convergence, Rhat=1).</code></pre>
+<p>The model takes some time to run (and this is a very small dataset!) but we are able to recover all parameters. To get an idea of the distance at which covariance decrease we can use the parameter values to produce the plot:</p>
+<pre class="r"><code># Get the posterior of the parameters
+draws &lt;- rstan::extract(stan_fit0, pars = c(&#39;beta0&#39;, &#39;beta1&#39;, &#39;sigma_sq&#39;, &#39;scale&#39;))
+
+# We make a sequence of distance
+dist_seq &lt;- seq(from = min(DMat), to = max(DMat), length.out = 100)
+
+# Compute the mean and the standard deviation of the posterior correlation
+post_cov &lt;- sapply(dist_seq,function(x)draws$sigma_sq*exp(-draws$scale*x^2))
+post_cov_mu &lt;-apply(post_cov,2,mean)
+post_cov_sd &lt;-apply(post_cov,2,sd)
+
+# Make a dataframe and plot
+post_df &lt;- tibble(dist = dist_seq,
+                  mu = post_cov_mu,
+                  sd = post_cov_sd)
+
+ggplot(post_df, aes(x = dist)) +
+  geom_line(aes(y = mu), color = &quot;#CD295A&quot;, size = 1) +
+  geom_ribbon(aes(ymin = mu - sd, ymax = mu + sd), fill = &quot;#38ADAE&quot;, alpha = .3) +
+  theme_classic() +
+  ylab(&quot;Covariance&quot;) +
+  xlab(&quot;Distance&quot;)</code></pre>
+<p><img src="/post/2020-10-06-pp2/index_files/figure-html/unnamed-chunk-17-1.png" width="672" /></p>
+<p>We can see that the correlation becomes null at a distance close to 5 units.</p>
+</div>
+<div id="exponential-quadratic-covariance-function" class="section level2">
+<h2>Exponential quadratic covariance function</h2>
+<p>While in the first model we have more flexibility, Stan has a pre-defined correlation function which make the coding simpler. <code>cov_exp_quad</code> uses the <strong>Exponentiated quadratic covariance function</strong>, another very common covariance function where:</p>
+<p><span class="math inline">\(C(x_i, x_j) = \sigma^2exp(\frac{-d^2}{2\rho^2})\)</span></p>
+<p>See the <a href="https://mc-stan.org/docs/2_22/functions-reference/covariance.html">Stan functions reference</a> for more detailed explanation.</p>
+</div>
+</div>
+<div id="faster-alternative-for-fitting-a-lgcp" class="section level1">
+<h1>Faster alternative for fitting a LGCP 🚀</h1>
+<p>In the part 3 of the tutorial we will broaden our horizons and explore how to fit more efficiently (or at least more rapidly) Log-Gaussian Cox process. Log Gaussian Cox process can be particularly long as estimating the Gaussian Field takes some time. Some methods seek to <strong>approximate</strong> the Gaussian Field, reducing the computation time. This is what we will explore in the next tutorial. We will have a look at the <a href="https://discourse.mc-stan.org/t/approximate-gps-with-spectral-stuff/1041">spectral approximation</a> possible to use in Stan and the Stochastic Partial Differential Equation that <a href="http://www.r-inla.org/">R-INLA</a> uses.</p>
+</div>
