@@ -3,11 +3,11 @@ title: Citizen Science field trip
 author: Benjamin Cretois
 date: '2020-10-01'
 slug: fieldtrip
-categories: []
-tags:
+categories:
   - Citizen Science
   - Biodiversity
   - Fun
+tags: []
 subtitle: ''
 summary: ''
 authors: []

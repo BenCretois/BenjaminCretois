@@ -3,11 +3,11 @@ title: Point process model - Part 1
 author: Benjamin Cretois
 date: '2020-09-09'
 slug: point-process-model-part-1
-categories: []
-tags:
+categories:
   - Statistics
   - Spatial analysis
   - Point processes
+tags: []
 subtitle: ''
 summary: ''
 authors: []
@@ -20,6 +20,8 @@ image:
 projects: []
 ---
 
+<link href="/rmarkdown-libs/anchor-sections/anchor-sections.css" rel="stylesheet" />
+<script src="/rmarkdown-libs/anchor-sections/anchor-sections.js"></script>
 
 
 <p>I have recently been playing with spatial data as a learning exercise and I have been particularly interested in point pattern analysis. While some packages already have canned function for this (see the excellent <code>inlabru</code> or the very well known <code>spatstat</code>), I prefer not to rely on them. As I wanted to improve my understanding of point pattern models and decided to use <code>rstan</code> where I need to code my model from scratch.</p>
@@ -110,7 +112,7 @@ b2 &lt;- 3
 dim &lt;- c(20,20)</code></pre>
 <p>And finally generate my point pattern. The function generated 2 plots, the first one is the simulated covariate and the second one is the simulated intensity of the point pattern.</p>
 <pre class="r"><code>pp &lt;- genDat_pp(b1, b2, dim)</code></pre>
-<p><img src="/post/pp1/index_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<p><img src="/post/2020-09-17-pp1/index_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
 <p>Et voila! We now have data we can play with!</p>
 </div>
 <div id="fitting-point-process-model-with-spatstat" class="section level2">
@@ -164,7 +166,7 @@ fit_stan &lt;- stan(model_code = ppm_stan, data = stan_data,
 ## beta0 2.12       0 0.02 2.08 2.11 2.12 2.14  2.17  1003    1
 ## beta1 2.97       0 0.03 2.91 2.95 2.97 2.99  3.02  1029    1
 ## 
-## Samples were drawn using NUTS(diag_e) at Thu Sep 10 11:14:23 2020.
+## Samples were drawn using NUTS(diag_e) at Wed Dec 02 10:20:18 2020.
 ## For each parameter, n_eff is a crude measure of effective sample size,
 ## and Rhat is the potential scale reduction factor on split chains (at 
 ## convergence, Rhat=1).</code></pre>
@@ -191,10 +193,10 @@ grid$pred_spatstat &lt;- as.vector(t(pred$v))
 grid$intensity &lt;- pp$Lambda</code></pre>
 <p>Plot the predictions</p>
 <pre class="r"><code>plot(grid)</code></pre>
-<p><img src="/post/pp1/index_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
+<p><img src="/post/2020-09-17-pp1/index_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
 <p>Somehow, spatstat do not predict in some cells.</p>
 <p>We can also plot the coefficients, this will help us vizualise the error associated to the parameter values.</p>
-<p><img src="/post/pp1/index_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<p><img src="/post/2020-09-17-pp1/index_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
 <p>Graphically we can see that stan performs better than the <code>ppm()</code> function. We can formalize this intuition by computing the sum of the <strong>Root Mean squared error</strong>.</p>
 <p>We define our helper function <code>rmse</code>:</p>
 <pre class="r"><code>rmse &lt;- function(true, observed){sqrt((true - observed)^2)}</code></pre>

@@ -26,9 +26,9 @@ date_format = "Jan 2006"
   date_end = ""
   description = """
 
-  * Analysing spatial data
+  * Analyzing spatial data
   * Building species distribution models
-  * Teaching
+  * Teaching quantitative methods and GIS
   """
   
 [[experience]]

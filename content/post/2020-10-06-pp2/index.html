@@ -3,11 +3,11 @@ title: Fitting point process models in Stan - Part 2
 author: Benjamin Cretois
 date: '2020-10-06'
 slug: fitting-point-process-models-in-stan-part-2
-categories: []
-tags:
+categories:
   - Point processes
   - Spatial analysis
   - Statistics
+tags: []
 subtitle: ''
 summary: ''
 authors: []
@@ -20,6 +20,8 @@ image:
 projects: []
 ---
 
+<link href="/rmarkdown-libs/anchor-sections/anchor-sections.css" rel="stylesheet" />
+<script src="/rmarkdown-libs/anchor-sections/anchor-sections.js"></script>
 
 
 <p>In the <a href="https://benjamincretois.netlify.app/post/point-process-model-part-1/">previous post</a> we learned about the <strong>Poisson point process model</strong> and how to fit it in <code>Stan</code> &amp; <code>spatstat</code>. In the Poisson point process model we assume each points to be independent of each other. Since Nature likes to complicate our lives this assumption is rarely satisfied and we need to account for any dependency between our observations to get our statistical model right.</p>
@@ -168,7 +170,7 @@ print(fit_stan_cox, pars = c(&#39;beta0&#39;, &#39;beta1&#39;, &#39;sigma_noise&
 ## beta1       2.98    0.01 0.08 2.81 2.92 2.98 3.04  3.14   154 1.01
 ## sigma_noise 0.48    0.00 0.02 0.45 0.47 0.48 0.50  0.52  5281 1.00
 ## 
-## Samples were drawn using NUTS(diag_e) at Wed Oct 07 12:42:06 2020.
+## Samples were drawn using NUTS(diag_e) at Wed Dec 02 10:35:07 2020.
 ## For each parameter, n_eff is a crude measure of effective sample size,
 ## and Rhat is the potential scale reduction factor on split chains (at 
 ## convergence, Rhat=1).</code></pre>
@@ -387,7 +389,7 @@ stan_fit0 &lt;- stan(model_code = fit_lgcp0,
 ## sigma_sq 0.48    0.00 0.08 0.34 0.42 0.47 0.52  0.66  4964    1
 ## scale    0.24    0.00 0.11 0.09 0.16 0.22 0.30  0.51  4334    1
 ## 
-## Samples were drawn using NUTS(diag_e) at Wed Oct 07 12:59:40 2020.
+## Samples were drawn using NUTS(diag_e) at Wed Dec 02 10:56:27 2020.
 ## For each parameter, n_eff is a crude measure of effective sample size,
 ## and Rhat is the potential scale reduction factor on split chains (at 
 ## convergence, Rhat=1).</code></pre>

@@ -3,11 +3,11 @@ title: Fitting point process models in Stan - Part 2
 author: Benjamin Cretois
 date: '2020-10-06'
 slug: fitting-point-process-models-in-stan-part-2
-categories: []
-tags:
+categories:
   - Point processes
   - Spatial analysis
   - Statistics
+tags: []
 subtitle: ''
 summary: ''
 authors: []

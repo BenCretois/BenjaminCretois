@@ -1,10 +1,10 @@
 ---
 title: "Hunters as Citizen Scientists"
-categories: []
-tags:
+categories:
   - Hunters
   - Conservation
   - Biodiversity
+tags: []
 subtitle: ''
 summary: ''
 authors: []

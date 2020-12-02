@@ -18,13 +18,13 @@ subtitle = ""
   icon = "dice"
   icon_pack = "fas"
   name = ""
-  description = "Applied bayesian statistics, Human-wildlife coexistence, spatial data analysis & GIS"
+  description = "Data science, machine learning, spatial data analysis & GIS"
   
 [[feature]]
   icon = "heart"
   icon_pack = "fas"
   name = ""
-  description = "Communicating complex concepts to general audiences & teaching"  
+  description = "Communicating complex concepts to general audiences"  
   
 [[feature]]
   icon = "laugh"

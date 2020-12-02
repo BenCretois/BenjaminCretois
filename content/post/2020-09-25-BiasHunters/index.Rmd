@@ -1,10 +1,10 @@
 ---
 title: Biases in Citizen Science data
-categories: []
-tags:
+categories:
   - Citizen Science
   - Point processes
   - Spatial analysis
+tags: []
 subtitle: ''
 summary: ''
 authors: []

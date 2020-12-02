@@ -3,11 +3,11 @@ title: Point process model - Part 1
 author: Benjamin Cretois
 date: '2020-09-09'
 slug: point-process-model-part-1
-categories: []
-tags:
+categories:
   - Statistics
   - Spatial analysis
   - Point processes
+tags: []
 subtitle: ''
 summary: ''
 authors: []

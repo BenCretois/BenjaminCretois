@@ -18,12 +18,11 @@ organizations:
   url: ""
 
 # Short bio (displayed in user profile at end of posts)
-bio: I am primarily working on spatial data analysis & citizen science
+bio: doing data analysis
 
 interests:
-- Species distribution models
-- Spatial analysis & Bayesian statistics
-- Human wildlife coexistence
+- Data analysis
+- Spatial data science
 - Citizen Science
 
 education:
@@ -68,8 +67,8 @@ user_groups:
 - Visitors
 ---
 
-My name is Benjamin Cretois and I am a PhD Student at the Department of Geography at the Norwegian University of Science and Technology under the supervision of [Jan Ketil Rød](https://www.ntnu.no/ansatte/jan.rod), [John Linnell](https://www.nina.no/english/Contact/Employees/Employee-info/AnsattID/12310) and [Erlend Nilsen](https://www.nina.no/kontakt/Ansatte/Ansattinformasjon.aspx?AnsattID=12833). My PhD takes place within the project [Transforming Citizen Science for Biodiversity](https://citizenscience.no/), a project which aim to improve the way we use Citizen Science to improve biodiversity conservation.
+My name is Benjamin Cretois and I am a PhD Student in **spatial data analysis** at the Department of Geography at the Norwegian University of Science and Technology. I am under the supervision of [Jan Ketil Rød](https://www.ntnu.no/ansatte/jan.rod), [John Linnell](https://www.nina.no/english/Contact/Employees/Employee-info/AnsattID/12310) and [Erlend Nilsen](https://www.nina.no/kontakt/Ansatte/Ansattinformasjon.aspx?AnsattID=12833). My PhD takes place within the project [Transforming Citizen Science for Biodiversity](https://citizenscience.no/), a project which aim to improve the way we use Citizen Science to improve biodiversity conservation.
 
-My research focus primarily on finding ways to **better use Citizen Science** observations to produce better **species distribution maps**. I also have a big interest in **human-wildlife coexistence**, particularly when it involves ungulates and carnivores. My expertise lies in GIS and spatial analysis and I recently found an interest in **Bayesian statistics** and **Point process models** which I pretend I understand.
+My research focus primarily on finding statistical methods to **better use Citizen Science data** for making better inference regarding species ecology. My expertise largely lies in data analysis and GIS (with a great love for both R and Python). I recently found an interest in **Bayesian statistics** and **Deep learning** which I pretend I understand.
 
-When I am not in front of my computer I am certainly doing Mixed Martial Arts or surfing in Portugal. Feel free to contact me if you have any questions!
+When I am not in front of my computer I am certainly rolling on a tatami while doing Brazilian Jiu Jitsu or under a wave while trying to surf in my hometown in Normandie. Feel free to contact me if you have any questions!

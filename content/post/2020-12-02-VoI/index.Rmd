@@ -1,0 +1,29 @@
+---
+title: Using Value of Information for Citizen Science
+author: Benjamin Cretois
+date: '2020-12-02'
+slug: using-value-of-information-for-citizen-science
+categories:
+  - Mathematics
+  - Spatial statistics
+  - Citizen Science
+tags: []
+subtitle: ''
+summary: ''
+authors: []
+lastmod: '2020-12-02T10:12:40+01:00'
+featured: yes
+image:
+  caption: ''
+  focal_point: ''
+  preview_only: no
+projects: []
+---
+
+With the dark and cold winter coming to Norway we switched environment once again and we came back to the comfort and security of a University meeting room during our last Citizen Science course meeting. The session was lead by Jorge and Kwaku and we had the pleasure of welcoming [Prof. Jo Eidsvik](https://www.ntnu.edu/employees/jo.eidsvik) and PhD student [Vilja Koski](https://www.jyu.fi/science/fi/maths/henkilosto/henkilosto/koski-vilja), who both working extensively on the Value Of Information theory.
+
+In the first part of the session [Jorge](https://citizenscience.no/people/jorge/) and [Kwaku](https://citizenscience.no/people/kwaku/) presented us a dilemma: would we prefer having data with imperfect detection but with exact coordinates or would it be better to have data with imprecision in the coordinates but perfectly identified? This question is of relevance for Citizen Science data as we often have to handle both sources of data.
+
+Next, after being kicked out of the room for security reasons (it appeared that the room was corona, or at least that is what one of the security person suggested) the meeting went on and Jo along with Vilja gave us some insights about the logic behind the Value Of Information theory. In a nutshell, this is a theory which helps a decision maker decide whether it worth to collect more information. Collecting data is usually costly and improving our understanding on whether enough data has been collected can be critical.
+
+After Jo’s talk Vilja presented a case study where VOI theory has been used to help monitoring the quality of 144 Finnish lakes. You can find her paper published in [Science of the Total Environment](https://www.sciencedirect.com/science/article/pii/S0048969720319094). This was followed by discussions about how to use this theory to improve Citizen Science dataset. For instance this could eventually help to know where it would be interesting to collect more information!
