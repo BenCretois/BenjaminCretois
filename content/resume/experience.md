@@ -18,12 +18,27 @@ date_format = "Jan 2006"
 #   Leave `date_end` empty if it's your current employer.
 #   Begin/end multi-line descriptions with 3 quotes `"""`.
 [[experience]]
+  title = "Data scientist"
+  company = "Norwegian Institute for Nature Research (NINA)"
+  company_url = ""
+  location = "Trondheim, Norway"
+  date_start = "2021-04-01"
+  date_end = ""
+  description = """
+
+  * Building deep learning models for image / sound classification
+  * Building species distribution models
+  * Helping researchers with statistics and machine learning methods
+  """
+
+
+[[experience]]
   title = "PhD Candidate"
   company = "Norwegian University of Science and Technology (NTNU)"
   company_url = ""
   location = "Trondheim, Norway"
   date_start = "2018-09-01"
-  date_end = ""
+  date_end = "2021-04-01"
   description = """
 
   * Analyzing spatial data
@@ -44,6 +59,19 @@ date_format = "Jan 2006"
   * Analyzing depredation data from European country
   """
   
+[[experience]]
+  title = "Research assistant"
+  company = "Norwegian Institute for Nature Research"
+  company_url = ""
+  location = "Trondheim, Norway"
+  date_start = "2017-04-01"
+  date_end = "2017-08-01"
+  description = """
+
+  * Use of text data mining and classification methods to analyze
+environmental legislation
+  """
+
 [[experience]]
   title = "Student in Ecology & Evolution"
   company = "Université de Rennes I"

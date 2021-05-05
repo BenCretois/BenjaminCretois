@@ -10,23 +10,26 @@ authors:
 superuser: true
 
 # Role/position
-role: PhD Candidate in Geography
+role: Data scientist
 
 # Organizations/Affiliations
 organizations:
-- name: Norwegian University of Science and Technology
+- name: Norwegian Institute for Nature Research
   url: ""
 
 # Short bio (displayed in user profile at end of posts)
 bio: doing data analysis
 
 interests:
-- Data analysis
+- Deep learning
 - Spatial data science
-- Citizen Science
+- Image / sound classification
 
 education:
   courses:
+  - course: PhD in spatial data analysis
+    institution: Norwegian University of Science and Technology
+    year: 2021
   - course: Msc in Ecology and Law
     institution: Université de Rennes I
     year: 2019
@@ -41,10 +44,10 @@ education:
 social:
 - icon: envelope
   icon_pack: fas
-  link: '#contact'  # For a direct email link, use "mailto:benjamin.cretois@ntnu.no".
+  link: '#contact'  # For a direct email link, use "mailto:benjamin.cretois@nina.no".
 - icon: twitter
   icon_pack: fab
-  link: https://twitter.com/Benjamin_M_CR
+  link: https://twitter.com/benjamincretois
 - icon: google-scholar
   icon_pack: ai
   link: https://scholar.google.co.uk/citations?user=40ZX7XUAAAAJ&hl=fr
@@ -67,8 +70,8 @@ user_groups:
 - Visitors
 ---
 
-My name is Benjamin Cretois and I am a PhD Student in **spatial data analysis** at the Department of Geography at the Norwegian University of Science and Technology. I am under the supervision of [Jan Ketil Rød](https://www.ntnu.no/ansatte/jan.rod), [John Linnell](https://www.nina.no/english/Contact/Employees/Employee-info/AnsattID/12310) and [Erlend Nilsen](https://www.nina.no/kontakt/Ansatte/Ansattinformasjon.aspx?AnsattID=12833). My PhD takes place within the project [Transforming Citizen Science for Biodiversity](https://citizenscience.no/), a project which aim to improve the way we use Citizen Science to improve biodiversity conservation.
+My name is Benjamin Cretois and I am a now a **data scientist** at the [Norwegian Institute for Nature Research](https://www.nina.no/). My work consists in using Machine learning and statistics to help researchers in their project. At the moment I am mainly involved in projects aiming to **identify and classify sound and images** from different ecosystems.
 
-My research focus primarily on finding statistical methods to **better use Citizen Science data** for making better inference regarding species ecology. My expertise largely lies in data analysis and GIS (with a great love for both R and Python). I recently found an interest in **Bayesian statistics** and **Deep learning** which I pretend I understand.
+Previously, I have done my PhD in **spatial data analysis** at the Department of Geography at the Norwegian University of Science and Technology. My PhD took place within the project [Transforming Citizen Science for Biodiversity](https://citizenscience.no/), a project which aim to improve the way we use Citizen Science to improve biodiversity conservation.
 
-When I am not in front of my computer I am certainly rolling on a tatami while doing Brazilian Jiu Jitsu or under a wave while trying to surf in my hometown in Normandie. Feel free to contact me if you have any questions!
+When I am not in front of my computer I am certainly under a rock trying to climb it or under a wave while trying to surf in my hometown in Normandie. Feel free to contact me if you have any questions!
